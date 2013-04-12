@@ -2,6 +2,7 @@
 ''' ---------------------------------------------------------------------------
 
     Copyright 2013    Philipp Eisenhauer, Stefano Mosso
+    Modified by: Roger Fan
     
     This file is part of the Generalized Roy Toolbox. 
     
@@ -32,14 +33,16 @@ import numpy as np
 import grmReader  
 
 def simulate():
-    ''' Simulate data generation process of the Generalized Roy Model.
-    
-    '''
+    ''' Simulate data generation process of the Generalized Roy Model. '''
+
     # Process initFile.
     initDict = grmReader.read()
 
-    ''' Distribute parametrization and (limited) type conversions.
-    '''
+
+    #
+    # Distribute parametrization and (limited) type conversions.
+    #
+
     numAgents  = initDict['numAgents']
     fileName   = initDict['fileName']
     
@@ -56,21 +59,23 @@ def simulate():
     U0V_rho    = initDict['U0V_rho']  
     
     randomSeed = initDict['randomSeed']  
-    
-    ''' Set random seed
-    '''
+
+    # Set random seed
     np.random.seed(randomSeed)
     
-    ''' Construct auxiliary objects.
-    '''
+    # Construct auxiliary objects.
     numCovarsOut  = Y1_beta.shape[0]
     numCovarsCost = D_gamma.shape[0]
     
     U1V_cov      = U1V_rho*np.sqrt(U1_var)*np.sqrt(V_var)
     U0V_cov      = U0V_rho*np.sqrt(U0_var)*np.sqrt(V_var)
     
-    ''' Simulate observable agent characteristics.
-    '''
+
+    #
+    # Simulation
+    #
+
+    # Simulate observable agent characteristics.
     means = np.tile(0.0, numCovarsOut)
     covs  = np.identity(numCovarsOut)
     
@@ -82,14 +87,12 @@ def simulate():
     
     Z     = np.random.multivariate_normal(means, covs, numAgents)
     
-    ''' Construct level indicators for outcomes and choices. 
-    '''
+    # Construct level indicators for outcomes and choices. 
     Y1_level = np.dot(Y1_beta, X.T)
     Y0_level = np.dot(Y0_beta, X.T)
     D_level  = np.dot(D_gamma, Z.T)
     
-    ''' Simulate unobservables from the model.
-    '''
+    # Simulate unobservables from the model.
     means = np.tile(0.0, 3)
     vars_ = [U1_var, U0_var, V_var]
     
@@ -103,8 +106,7 @@ def simulate():
     
     U = np.random.multivariate_normal(means, covs, numAgents)
     
-    ''' Simulate individual outcomes and choices.
-    '''
+    # Simulate individual outcomes and choices.
     Y1 = np.tile(np.nan, (numAgents))
     Y0 = np.tile(np.nan, (numAgents))
     Y  = np.tile(np.nan, (numAgents))
@@ -131,8 +133,7 @@ def simulate():
         # Observed outcomes.
         Y[i]  = D[i]*Y1[i] + (1.0 - D[i])*Y0[i]
         
-    ''' Check quality of simulated sample. 
-    '''
+    # Check quality of simulated sample. 
     assert (np.all(np.isfinite(Y1)))
     assert (np.all(np.isfinite(Y0)))
     
@@ -153,12 +154,10 @@ def simulate():
     
     assert ((D.all() in [1.0, 0.0]))
        
-    ''' Export sample to *.txt file for further processing. 
-    '''
+    # Export sample to *.txt file for further processing. 
     np.savetxt(fileName, np.column_stack((Y, D, X, Z)), fmt= '%8.3f')
     
-''' Executable.
-'''
+
 if __name__ == '__main__':
     
     simulate()

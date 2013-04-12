@@ -1,6 +1,7 @@
 ''' ---------------------------------------------------------------------------
 
     Copyright 2013    Philipp Eisenhauer, Stefano Mosso
+    Modified by: Roger Fan
     
     This file is part of the Generalized Roy Toolbox. 
     
@@ -29,11 +30,14 @@ import json
 
 import numpy as np
 
-''' Public Interface.
-'''
+
+#
+# Public Interface.
+#
+
 def read():
-    ''' Public interface to request reading of an initFile.
-    '''   
+    ''' Public interface to request reading of an initFile. '''   
+
     # Read File from Disk.
     initDict = _read()
 
@@ -41,19 +45,22 @@ def read():
     assert (_check(initDict) == True)
     
     # Write File to Disk.
-    _ = _write(initDict)
+    _write(initDict)
     
     # Finishing.
     return initDict
     
-''' Private Functions
-'''
+
+#
+# Private Functions
+#
+
 def _write(initDict):
     ''' Write dictionary that results from the processing of the *.ini
         file.
+
     '''
-        
-    #  Write out the *.json file.
+    # Write out the *.json file.
     with open('grmInit.json', 'w') as file_:
         
         json.dump(initDict, file_)
@@ -61,6 +68,7 @@ def _write(initDict):
 def _read():
     ''' This function reads the *.ini file, collects the information in a 
         dictionary and outputs it to a *.json file.
+
     '''
     # Initialization
     dict_ = {}
@@ -74,16 +82,13 @@ def _read():
             # Number of Agents.
             if(count == 6):
                 
-                str_ = str_.split('!')[0]
-                
+                str_ = str_.split('!')[0]     
                 dict_['numAgents'] = int(str_)
 
             # File Name.    
             if(count == 7):
                 
-                
                 str_ = str_.split("'")[1]
-
                 dict_['fileName'] = str_    
             
             # Coefficients for Treated State .   
@@ -122,58 +127,51 @@ def _read():
             # Variance of Disturbance in Treated State. 
             if(count == 20):
                 
-                str_ = _processLine(str_)
-                                
+                str_ = _processLine(str_)                
                 dict_['U1_var'] = float(str_[0])  
             
             # Variance of Disturbance in Untreated State.
             if(count == 21):
                 
                 str_ = _processLine(str_)
-                                
                 dict_['U0_var'] = float(str_[0])  
             
             # Variance of Disturbance in Cost Equation.
             if(count == 22):
                 
                 str_ = _processLine(str_)
-                        
                 dict_['V_var'] = float(str_[0])  
                             
             # Correlation Coefficients (U1, V)            
             if(count == 23):
                 
                 str_ = _processLine(str_)
-                
                 dict_['U1V_rho'] = float(str_[0])  
  
             # Correlation Coefficients (U1, V)            
             if(count == 24):
                 
                 str_ = _processLine(str_)
-                
                 dict_['U0V_rho'] = float(str_[0])     
 
             # Maximum Number of Iterations          
             if(count == 28):
                 
                 str_ = _processLine(str_)
-
                 dict_['maxiter'] = int(str_[0])   
 
             # Maximum Number of Iterations          
             if(count == 32):
                 
                 str_ = _processLine(str_)
-
                 dict_['randomSeed'] = int(str_[0])   
                     
     # Finishing.
     return dict_
 
 def _processLine(str_):
-    ''' Basic processing of line from initialization file.
-    '''
+    ''' Basic processing of line from initialization file. '''
+
     # Antibugging.
     assert (isinstance(str_, str))
     
@@ -187,8 +185,8 @@ def _processLine(str_):
     return str_
 
 def _check(initDict):
-    ''' Check integrity of initFile dict.
-    '''
+    ''' Check integrity of initFile dict. '''
+
     # Antibugging.
     assert (isinstance(initDict, dict))
     

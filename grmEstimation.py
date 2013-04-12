@@ -2,6 +2,7 @@
 ''' ---------------------------------------------------------------------------
 
     Copyright 2013    Philipp Eisenhauer, Stefano Mosso
+    Modified by: Roger Fan
     
     This file is part of the Generalized Roy Toolbox. 
     
@@ -38,8 +39,11 @@ from    scipy.optimize  import  fmin_bfgs
 # project library
 import grmReader
 
-''' Public Interface.
-'''
+
+#
+# Public Interface.
+#
+
 def estimate():
     ''' Public interface to request an estimation of the Generalized
         Roy Model.
@@ -57,8 +61,11 @@ def estimate():
     # Process initFile.
     _initializeLogging()
     
-    ''' Distribute useful covariates.
-    '''
+
+    #
+    # Distribute useful covariates.
+    #
+
     numAgents = initDict['numAgents']
 
     Y1_beta   = np.array(initDict['Y1_beta'])
@@ -74,13 +81,19 @@ def estimate():
     
     maxiter   = initDict['maxiter']
     
-    ''' Construct auxiliary objects.
-    '''
+
+    #
+    # Construct auxiliary objects.
+    #
+
     numCovarsOut  = Y1_beta.shape[0]
     numCovarsCost = D_gamma.shape[0]
     
-    ''' Read and check dataset, distribute entries.
-    '''
+
+    #
+    # Read and check dataset, distribute entries.
+    #
+
     data = np.genfromtxt(initDict['fileName'], dtype = 'float')
 
     assert (_checkData(data, numAgents, numCovarsOut, numCovarsCost) == True)
@@ -91,8 +104,10 @@ def estimate():
     X = data[:,2:(numCovarsOut + 2)]
     Z = data[:,-numCovarsCost:]
     
-    ''' Maximization Script.
-    '''
+
+    #
+    # Maximization Script.
+    #
     
     # Construct starting values.    
     startVals = np.concatenate((Y1_beta, Y0_beta, D_gamma, 
@@ -101,34 +116,39 @@ def estimate():
     # Run maximization.
     sys.stdout = open('grmLogging.txt', 'a')
     
-    rslt = fmin_bfgs(_maxAlgorihtmInterface, startVals, \
+    rslt = fmin_bfgs(_maxAlgorithmInterface, startVals, \
                      args = (Y, D, X, Z), maxiter = maxiter, \
-                     full_output = True)
+                     full_output = False)
     
     sys.stdout = sys.__stdout__
     
     # Construct dictionary with results.
     rslt = _distributeEvaluationValues(rslt, numCovarsOut, True)
+
+    rslt['Y1_beta'] = rslt['Y1_beta'].tolist()
+    rslt['Y0_beta'] = rslt['Y0_beta'].tolist()
     
+    rslt['D_gamma'] = rslt['D_gamma'].tolist()
+
     #  Write out the *.json file.
     with open('grmRslt.json', 'w') as file_:
         
-        json.dump(initDict, file_)
-    
-''' Private Functions.
-'''
+        json.dump(rslt, file_)
+ 
+
+#   
+# Private Functions.
+#
+
 def _initializeLogging():
-    ''' Prepare logging.
-    
-    '''
+    ''' Prepare logging. '''
+
     with open('grmLogging.txt', 'w') as file_:
-        
         file_.write('\n LogFile of Generalized Roy Toolbox \n\n')
         
 def _checkData(data, numAgents, numCovarsOut, numCovarsCost):
-    ''' Basic checks for the data.
-    
-    '''
+    ''' Basic checks for the data. '''
+
     # Antibugging.
     assert (isinstance(data, np.ndarray))
     assert (isinstance(numAgents, int))
@@ -146,10 +166,9 @@ def _checkData(data, numAgents, numCovarsOut, numCovarsCost):
     # Finishing.
     return True
     
-def _maxAlgorihtmInterface(x, Y, D, X, Z):
-    ''' Interface to the SciPy maximization routines.
-    
-    '''
+def _maxAlgorithmInterface(x, Y, D, X, Z):
+    ''' Interface to the SciPy maximization routines. '''
+
     # Auxiliary objects.
     numCovarsOut = X.shape[1]
     
@@ -163,18 +182,14 @@ def _maxAlgorihtmInterface(x, Y, D, X, Z):
     return likl
   
 def _distributeEvaluationValues(x, numCovarsOut, isList = False):
-    ''' Distribute the evaluation values.
-    
-    '''
+    ''' Distribute the evaluation values. '''
+
     #Antibugging.
     assert (isList in [True, False])
     
-    if(isList):
-        
+    if(isList):   
         pass
-            
     else:
-        
         assert (isinstance(x, np.ndarray))
         assert (np.all(np.isfinite(x)))
         assert (x.ndim == 1)
@@ -190,8 +205,7 @@ def _distributeEvaluationValues(x, numCovarsOut, isList = False):
     
     rslt['D_gamma'] = x[(2*numCovarsOut):(-4)]
     
-    ''' Parameters with natural bounds. 
-    '''    
+    # Parameters with natural bounds. 
     rslt['U1_var']  = np.exp(x[(-4)])
     rslt['U0_var']  = np.exp(x[(-3)])
 
@@ -202,9 +216,8 @@ def _distributeEvaluationValues(x, numCovarsOut, isList = False):
     return rslt
 
 def _negLogLiklContribution(rslt, Y, D, X, Z):
-    ''' Negative log-likelihood function of the Generalized Roy Model.
-    
-    '''
+    ''' Negative log-likelihood function of the Generalized Roy Model. '''
+
     # Distribute input.
     Y1_beta = rslt['Y1_beta']
     Y0_beta = rslt['Y0_beta']
@@ -238,11 +251,9 @@ def _negLogLiklContribution(rslt, Y, D, X, Z):
     
     # Transformations.
     likl =  np.clip(likl, 1e-20, 1.0)
-    
     likl = -np.log(likl)
-    
     likl = likl.sum()
-    
+
     lik = (1.0/numAgents)*likl
         
     # Quality checks.
@@ -253,8 +264,7 @@ def _negLogLiklContribution(rslt, Y, D, X, Z):
     #Finishing.        
     return lik
 
-''' Executable.
-'''
+
 if __name__ == '__main__':
     
     estimate()

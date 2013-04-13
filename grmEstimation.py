@@ -44,11 +44,13 @@ import grmReader
 # Public Interface.
 #
 
-def estimate():
+def estimate(outputfile = False):
     ''' Public interface to request an estimation of the Generalized
         Roy Model.
     
     '''
+    print "Estimating."
+
     # Checks.
     assert (os.path.exists('grmInit.ini')) 
     
@@ -122,18 +124,18 @@ def estimate():
     
     sys.stdout = sys.__stdout__
     
-    # Construct dictionary with results.
+    # Output
     rslt = _distributeEvaluationValues(rslt, numCovarsOut, True)
 
     rslt['Y1_beta'] = rslt['Y1_beta'].tolist()
     rslt['Y0_beta'] = rslt['Y0_beta'].tolist()
-    
     rslt['D_gamma'] = rslt['D_gamma'].tolist()
 
-    #  Write out the *.json file.
-    with open('grmRslt.json', 'w') as file_:
-        
-        json.dump(rslt, file_)
+    if outputfile is not False:
+        with open(outputfile, 'w') as file_:
+            json.dump(rslt, file_)
+        print "Estimates saved to \'{}\'.".format(outputfile)
+
  
 
 #   
@@ -261,7 +263,6 @@ def _negLogLiklContribution(rslt, Y, D, X, Z):
     assert (np.isfinite(lik))
     assert (lik > 0.0)
     
-    #Finishing.        
     return lik
 
 

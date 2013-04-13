@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 ''' ---------------------------------------------------------------------------
 
-    Copyright 2013    Philipp Eisenhauer, Stefano Mosso
-    Modified by: Roger Fan
-    
+    Econ 419: Final Project
+    Roger Fan
+
     This file is part of the Generalized Roy Toolbox. 
     
     The Generalized Roy Toolbox is free software: you can redistribute it 
@@ -21,154 +21,215 @@
  
     ---------------------------------------------------------------------------
  
-    This module contains the capabilities required for the simulation
-    of the Generalized Roy Model.
+    This module contains the capabilities required for the calculation
+    of simulated treatment effects of the Generalized Roy Model.
  
 '''
 
+
 # standard library
+import os
 import numpy as np
 import json
 
-# project library
-import grmReader  
 
+#
+# Public Functions
+#
 
 def read_rslt():
-    json_data=open('grmRslt.json')
+    ''' Reads in estimates from file. 
 
-    data = json.load(json_data)
-    json_data.close()
+        Returns
+        ---------
+        Dict with keys 'Y0_beta', 'Y1_beta', 'D_gamma'.
+
+    '''    
+    assert (os.path.exists('grmRslt.json')) 
+
+    with open('grmRslt.json') as file_:
+        rslt = json.load(file_)
+
+    rslt['Y0_beta'] = np.array(rslt['Y0_beta'])
+    rslt['Y1_beta'] = np.array(rslt['Y1_beta'])
+    rslt['D_gamma'] = np.array(rslt['D_gamma'])
+
+    return rslt
+
+def read_data(num_x):
+    ''' Reads in data from file. 
+
+        Argument
+        ---------
+        num_x : int
+            Number of X variables in the model.
+
+        Returns
+        ---------
+        Dict with keys 'Y', 'D', 'X', 'Z'.
+
+    '''
+    assert (os.path.exists('grmData.dat')) 
+    raw = np.genfromtxt('grmData.dat')
+
+    Y = raw[:,0]
+    D = raw[:,1]
+    X = raw[:,2:2+num_x]
+    Z = raw[:,2+num_x:]
+
+    data = {}
+    data['Y'] = Y
+    data['D'] = D
+    data['X'] = X
+    data['Z'] = Z
 
     return data
 
+def calcSimTreatEffects(simnum, outputfile = False):
+    ''' Simulates data and calculates treatment effects.
 
-# def simulate():
-#     ''' Simulate data generation process of the Generalized Roy Model. '''
+        Arguments
+        ---------
+        simnum : int
+            Number of simulations to perform
+        outputfile : str, optional
+            Saves output to the given file is provided.
 
-#     # Process initFile.
-#     initDict = grmReader.read()
+        Returns
+        ---------
+        np.array([ATE, TT, TUT])
+
+    '''
+
+    rslt = read_rslt()
+    data = read_data(rslt['Y1_beta'].shape[0])
+
+    treat_effects_t = []
+    for i in range(simnum):
+        simdata = _genSimData(rslt, data)
+        treat_effects_iter = _calcTreatEffects(simdata)
+        treat_effects_t.append(treat_effects_iter)
+
+    treat_effects = np.vstack(treat_effects_t)
+    avg_treat_effects = np.mean(treat_effects, axis=0)
+
+    if outputfile is not False:
+        with open(outputfile, 'w') as file_:
+            np.savetxt(file_, avg_treat_effects)
+
+        print "Treatment Effects saved to \'{}\'.".format(outputfile)
+
+    return avg_treat_effects
 
 
-#     #
-#     # Distribute parametrization and (limited) type conversions.
-#     #
+#
+# Private Functions
+#
 
-#     numAgents  = initDict['numAgents']
-#     fileName   = initDict['fileName']
-    
-#     Y1_beta    = np.array(initDict['Y1_beta'])
-#     Y0_beta    = np.array(initDict['Y0_beta'])
-    
-#     D_gamma    = np.array(initDict['D_gamma'])
-    
-#     U1_var     = initDict['U1_var'] 
-#     U0_var     = initDict['U0_var'] 
-#     V_var      = initDict['V_var']
-    
-#     U1V_rho    = initDict['U1V_rho']  
-#     U0V_rho    = initDict['U0V_rho']  
-    
-#     randomSeed = initDict['randomSeed']  
+def _genSimData(rslt, data):
 
-#     # Set random seed
-#     np.random.seed(randomSeed)
+    # Distribute Data and Parameters
+    X = data['X']
+    Z = data['Z']
+    numAgents  = X.shape[0]
     
-#     # Construct auxiliary objects.
-#     numCovarsOut  = Y1_beta.shape[0]
-#     numCovarsCost = D_gamma.shape[0]
+    Y1_beta    = np.array(rslt['Y1_beta'])
+    Y0_beta    = np.array(rslt['Y0_beta'])
+    D_gamma    = np.array(rslt['D_gamma'])
     
-#     U1V_cov      = U1V_rho*np.sqrt(U1_var)*np.sqrt(V_var)
-#     U0V_cov      = U0V_rho*np.sqrt(U0_var)*np.sqrt(V_var)
-    
+    U1_var     = rslt['U1_var'] 
+    U0_var     = rslt['U0_var'] 
+    V_var      = 1.
+    U1V_rho    = rslt['U1V_rho']  
+    U0V_rho    = rslt['U0V_rho']  
 
-#     #
-#     # Simulation
-#     #
+    # Construct Auxiliary Objects
+    U1V_cov      = U1V_rho*np.sqrt(U1_var)*np.sqrt(V_var)
+    U0V_cov      = U0V_rho*np.sqrt(U0_var)*np.sqrt(V_var)
 
-#     # Simulate observable agent characteristics.
-#     means = np.tile(0.0, numCovarsOut)
-#     covs  = np.identity(numCovarsOut)
+    # Draw Errors
+    covs  = np.diag([U1_var, U0_var, V_var])
+    covs[0,2] = U1V_cov 
+    covs[2,0] = covs[0,2]
+    covs[1,2] = U0V_cov
+    covs[2,1] = covs[1,2]
     
-#     X      = np.random.multivariate_normal(means, covs, numAgents)
-#     X[:,0] = 1.0
-    
-#     means = np.tile(0.0, numCovarsCost)
-#     covs  = np.identity(numCovarsCost)
-    
-#     Z     = np.random.multivariate_normal(means, covs, numAgents)
-    
-#     # Construct level indicators for outcomes and choices. 
-#     Y1_level = np.dot(Y1_beta, X.T)
-#     Y0_level = np.dot(Y0_beta, X.T)
-#     D_level  = np.dot(D_gamma, Z.T)
-    
-#     # Simulate unobservables from the model.
-#     means = np.tile(0.0, 3)
-#     vars_ = [U1_var, U0_var, V_var]
-    
-#     covs  = np.diag(vars_)
-    
-#     covs[0,2] = U1V_cov 
-#     covs[2,0] = covs[0,2]
-    
-#     covs[1,2] = U0V_cov
-#     covs[2,1] = covs[1,2]
-    
-#     U = np.random.multivariate_normal(means, covs, numAgents)
-    
-#     # Simulate individual outcomes and choices.
-#     Y1 = np.tile(np.nan, (numAgents))
-#     Y0 = np.tile(np.nan, (numAgents))
-#     Y  = np.tile(np.nan, (numAgents))
-    
-#     D  = np.tile(np.nan, (numAgents))
-    
-#     for i in range(numAgents):
-        
-#         # Distribute unobservables.
-#         U1 = U[i,0]
-#         U0 = U[i,1]
-#         V  = U[i,2]
-    
-#         # Decision Rule.
-#         expectedBenefits = Y1_level[i] - Y0_level[i]
-#         cost             = D_level[i]  + V 
-        
-#         D[i] = np.float((expectedBenefits - cost > 0))
-        
-#         # Potential outcomes.
-#         Y1[i] = Y1_level[i] + U1
-#         Y0[i] = Y0_level[i] + U0
-        
-#         # Observed outcomes.
-#         Y[i]  = D[i]*Y1[i] + (1.0 - D[i])*Y0[i]
-        
-#     # Check quality of simulated sample. 
-#     assert (np.all(np.isfinite(Y1)))
-#     assert (np.all(np.isfinite(Y0)))
-    
-#     assert (np.all(np.isfinite(Y)))
-#     assert (np.all(np.isfinite(D)))
-    
-#     assert (Y1.shape == (numAgents, ))
-#     assert (Y0.shape == (numAgents, ))
-    
-#     assert (Y.shape  == (numAgents, ))
-#     assert (D.shape  == (numAgents, ))
-    
-#     assert (Y1.dtype == 'float')
-#     assert (Y0.dtype == 'float')
-    
-#     assert (Y.dtype == 'float')
-#     assert (D.dtype == 'float')
-    
-#     assert ((D.all() in [1.0, 0.0]))
-       
-#     # Export sample to *.txt file for further processing. 
-#     np.savetxt(fileName, np.column_stack((Y, D, X, Z)), fmt= '%8.3f')
-    
+    U = np.random.multivariate_normal(np.tile(0.0, 3), covs, numAgents)
 
-# if __name__ == '__main__':
+    U1 = U[:,0]
+    U0 = U[:,1]
+    V  = U[:,2]
+
+    # Construct Level Indicators
+    Y1_level = np.dot(Y1_beta, X.T)
+    Y0_level = np.dot(Y0_beta, X.T)
+    D_level  = np.dot(D_gamma, Z.T)
+
+    # Simulate
+    Y1 = np.tile(np.nan, (numAgents))
+    Y0 = np.tile(np.nan, (numAgents))
+    Y  = np.tile(np.nan, (numAgents))
+    D  = np.tile(np.nan, (numAgents))
     
-#     simulate()
+    expectedBenefits = Y1_level - Y0_level
+    cost             = D_level  + V 
+
+    def decisionRule(expBen, cost):
+        return np.float(expBen - cost > 0)
+
+    D = np.array(map(decisionRule, expectedBenefits, cost))
+
+    Y1 = Y1_level + U1
+    Y0 = Y0_level + U0
+
+    Y = D*Y1 + (1.0-D)*Y0
+
+    # Check quality of simulated sample. 
+    assert (np.all(np.isfinite(Y1)))
+    assert (np.all(np.isfinite(Y0)))
+    
+    assert (np.all(np.isfinite(Y)))
+    assert (np.all(np.isfinite(D)))
+    
+    assert (Y1.shape == (numAgents, ))
+    assert (Y0.shape == (numAgents, ))
+    
+    assert (Y.shape  == (numAgents, ))
+    assert (D.shape  == (numAgents, ))
+    
+    assert (Y1.dtype == 'float')
+    assert (Y0.dtype == 'float')
+    assert (Y.dtype == 'float')
+    assert (D.dtype == 'float')
+
+    # Output
+    simdata = {}
+    simdata['Y']  = Y
+    simdata['Y0'] = Y0
+    simdata['Y1'] = Y1
+    simdata['D']  = D
+    simdata['X']  = X
+    simdata['Z']  = Z
+
+    return simdata
+
+def _calcTreatEffects(simdata):
+    Y1 = simdata['Y1']
+    Y0 = simdata['Y0']
+    D  = simdata['D']
+
+    Y1_T  = Y1[D == 1.]
+    Y0_T  = Y0[D == 1.]
+    Y1_UT = Y1[D == 0.]
+    Y0_UT = Y0[D == 0.]
+
+    ATE = np.sum(Y1    - Y0   ) / Y1.shape[0]
+    TT  = np.sum(Y1_T  - Y0_T ) / Y1_T.shape[0]
+    TUT = np.sum(Y1_UT - Y0_UT) / Y1_UT.shape[0]
+
+    return np.array([ATE, TT, TUT])
+
+
+
+
+

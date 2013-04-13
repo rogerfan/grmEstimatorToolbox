@@ -35,6 +35,8 @@ import grmReader
 def simulate():
     ''' Simulate data generation process of the Generalized Roy Model. '''
 
+    print "Simulating Data."
+
     # Process initFile.
     initDict = grmReader.read()
 

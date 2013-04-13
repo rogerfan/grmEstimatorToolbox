@@ -13,10 +13,17 @@ sys.path.insert(0, dir_)
 # project library
 import grmToolbox
 
-''' Simulation.
-'''
+#
+# Simulation.
+#
 grmToolbox.simulate()
 
-''' Estimation.
-'''
-grmToolbox.estimate()
+#
+# Estimation.
+#
+rslt = grmToolbox.estimate(outputfile = 'grmRslt.json')
+
+#
+# Calculating Treatment Effects
+#
+treat = grmToolbox.calcSimTreatEffects(20, outputfile = 'grmTreatEffects.txt')

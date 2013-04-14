@@ -31,6 +31,7 @@
 import os
 import numpy as np
 import json
+from mpi4py import MPI
 
 
 #
@@ -91,7 +92,7 @@ def calcSimTreatEffects(simnum, outputfile = False):
         Arguments
         ---------
         simnum : int
-            Number of simulations to perform
+            Number of simulations to perform.
         outputfile : str, optional
             Saves output to the given file is provided.
 
@@ -101,25 +102,81 @@ def calcSimTreatEffects(simnum, outputfile = False):
 
     '''
 
+    # Load Data
     rslt = read_rslt()
     data = read_data(rslt['Y1_beta'].shape[0])
 
+    # Perform Simulations and Calculate Treatment EFfects
     treat_effects_t = []
     for i in range(simnum):
         simdata = _genSimData(rslt, data)
         treat_effects_iter = _calcTreatEffects(simdata)
         treat_effects_t.append(treat_effects_iter)
 
+    # Avg Treatment Effects
     treat_effects = np.vstack(treat_effects_t)
     avg_treat_effects = np.mean(treat_effects, axis=0)
 
+    # Output
     if outputfile is not False:
         with open(outputfile, 'w') as file_:
             np.savetxt(file_, avg_treat_effects)
-
-        print "Treatment Effects saved to \'{}\'.".format(outputfile)
+        print "Treatment Effects ({} Total Simulations) saved to \'{}\'.".format(simnum, outputfile)
 
     return avg_treat_effects
+
+def calcSimTreatEffects_mpi(simnum, outputfile = False):
+    ''' Simulates data and calculates treatment effects.
+        Allows usage of MPI for parallel processing
+
+        Arguments
+        ---------
+        simnum : int
+            Number of simulations to perform per processor.
+        outputfile : str, optional
+            Saves output to the given file is provided.
+
+        Returns
+        ---------
+        np.array([ATE, TT, TUT])
+
+    '''
+
+    comm = MPI.COMM_WORLD
+    size = comm.Get_size()
+    rank = comm.Get_rank()
+
+    # Load Data
+    rslt = read_rslt()
+    data = read_data(rslt['Y1_beta'].shape[0])
+
+    # Perform Simulations and Calculate Treatment EFfects
+    treat_effects_t = []
+    for i in range(simnum):
+        simdata = _genSimData(rslt, data)
+        treat_effects_iter = _calcTreatEffects(simdata)
+        treat_effects_t.append(treat_effects_iter)
+
+    # Avg Treatment Effects
+    treat_effects = np.vstack(treat_effects_t)
+    avg_treat_effects = np.mean(treat_effects, axis=0)
+
+    # Collect Effects 
+    avg_treat_effects_all = np.array(comm.gather(avg_treat_effects,root=0))
+
+    if rank == 0:
+
+        # Average Effects over Processors
+        avg_treat_effects = np.mean(avg_treat_effects_all, axis=0)
+
+        # Output
+        if outputfile is not False:
+            totsimnum = size * simnum
+            with open(outputfile, 'w') as file_:
+                np.savetxt(file_, avg_treat_effects)
+            print "Treatment Effects ({} Total Simulations) saved to \'{}\'.".format(totsimnum, outputfile)
+
+        return avg_treat_effects
 
 
 #

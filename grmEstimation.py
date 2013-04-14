@@ -136,7 +136,8 @@ def estimate(outputfile = False):
             json.dump(rslt, file_)
         print "Estimates saved to \'{}\'.".format(outputfile)
 
- 
+    return rslt
+
 
 #   
 # Private Functions.

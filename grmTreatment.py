@@ -98,7 +98,7 @@ def calcSimTreatEffects(simnum, outputfile = False):
 
         Returns
         ---------
-        np.array([ATE, TT, TUT])
+        Dict with keys 'ATE', 'TT', 'TUT', 'simnum'.
 
     '''
 
@@ -118,12 +118,18 @@ def calcSimTreatEffects(simnum, outputfile = False):
     avg_treat_effects = np.mean(treat_effects, axis=0)
 
     # Output
+    avg_treat_effects_d = {}
+    avg_treat_effects_d['ATE'] = avg_treat_effects[0]
+    avg_treat_effects_d['TT']  = avg_treat_effects[1]
+    avg_treat_effects_d['TUT'] = avg_treat_effects[2]
+    avg_treat_effects_d['sim_num'] = simnum
+
     if outputfile is not False:
         with open(outputfile, 'w') as file_:
-            np.savetxt(file_, avg_treat_effects)
+            json.dump(avg_treat_effects_d, file_)
         print "Treatment Effects ({} Total Simulations) saved to \'{}\'.".format(simnum, outputfile)
 
-    return avg_treat_effects
+    return avg_treat_effects_d
 
 def calcSimTreatEffects_mpi(simnum, outputfile = False):
     ''' Simulates data and calculates treatment effects.
@@ -138,7 +144,7 @@ def calcSimTreatEffects_mpi(simnum, outputfile = False):
 
         Returns
         ---------
-        np.array([ATE, TT, TUT])
+        Dict with keys 'ATE', 'TT', 'TUT', 'simnum'.
 
     '''
 
@@ -170,13 +176,20 @@ def calcSimTreatEffects_mpi(simnum, outputfile = False):
         avg_treat_effects = np.mean(avg_treat_effects_all, axis=0)
 
         # Output
+        totsimnum = size * simnum
+
+        avg_treat_effects_d = {}
+        avg_treat_effects_d['ATE'] = avg_treat_effects[0]
+        avg_treat_effects_d['TT']  = avg_treat_effects[1]
+        avg_treat_effects_d['TUT'] = avg_treat_effects[2]
+        avg_treat_effects_d['sim_num'] = totsimnum
+
         if outputfile is not False:
-            totsimnum = size * simnum
             with open(outputfile, 'w') as file_:
-                np.savetxt(file_, avg_treat_effects)
+                json.dump(avg_treat_effects_d, file_)
             print "Treatment Effects ({} Total Simulations) saved to \'{}\'.".format(totsimnum, outputfile)
 
-        return avg_treat_effects
+        return avg_treat_effects_d
 
 
 #

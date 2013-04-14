@@ -23,7 +23,7 @@ rank = comm.Get_rank()
 #
 # Calculating Treatment Effects
 # 
-treat_effects = grmToolbox.calcSimTreatEffects_mpi(20, outputfile = 'grmTreatEffects.txt')
+treat_effects = grmToolbox.calcSimTreatEffects_mpi(20, outputfile = 'grmTreatEffects.json')
 
 if rank == 0:
     print treat_effects

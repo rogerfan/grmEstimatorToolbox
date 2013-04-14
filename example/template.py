@@ -26,4 +26,7 @@ rslt = grmToolbox.estimate(outputfile = 'grmRslt.json')
 #
 # Calculating Treatment Effects
 #
-treat = grmToolbox.calcSimTreatEffects(20, outputfile = 'grmTreatEffects.txt')
+treat = grmToolbox.calcSimTreatEffects(20, outputfile = 'grmTreatEffects.json')
+
+print rslt
+print treat

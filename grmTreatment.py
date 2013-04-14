@@ -26,7 +26,6 @@
  
 '''
 
-
 # standard library
 import os
 import numpy as np
@@ -73,10 +72,10 @@ def read_data(num_x):
     assert (os.path.exists('grmData.dat')) 
     raw = np.genfromtxt('grmData.dat')
 
-    Y = raw[:,0]
-    D = raw[:,1]
-    X = raw[:,2:2+num_x]
-    Z = raw[:,2+num_x:]
+    Y = raw[:, 0]
+    D = raw[:, 1]
+    X = raw[:, 2:2+num_x]
+    Z = raw[:, 2+num_x:]
 
     data = {}
     data['Y'] = Y
@@ -133,7 +132,7 @@ def calcSimTreatEffects(simnum, outputfile = False):
 
 def calcSimTreatEffects_mpi(simnum, outputfile = False):
     ''' Simulates data and calculates treatment effects.
-        Allows usage of MPI for parallel processing
+        Allows usage of MPI for parallel processing.
 
         Arguments
         ---------
